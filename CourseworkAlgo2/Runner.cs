@@ -21,12 +21,12 @@ namespace CourseworkAlgo2
             //}
 
             var runTime = DateTime.Now;
-            for (double j = 0.1; j <= 20; j += j < 1 ? 0.1 : 1)
+            for (double j = 0.1; j <= 1; j += 0.1)
             {
                 RunForProblemData(new ProblemData
                 {
                     Coef1 = j,
-                    LambdaLimit = (0, 4),
+                    LambdaLimit = (0.0001, 1.5),
                     Ksi1 = new KsiData
                     {
                         Step = 0.2
@@ -56,6 +56,8 @@ namespace CourseworkAlgo2
                 {
                     sk[i] = problemCalculator.CalculateEigenvalueAmount(i + 1);
                 }
+                //var prevEigenValues = new Complex[] { 0.5, 0.5, 0.5 };
+                //var sk = new Complex[] { 0, 0, 0 };
                 Console.WriteLine("Sk");
                 sk.ConsoleWrite();
 
@@ -67,7 +69,7 @@ namespace CourseworkAlgo2
                 nextEigenValues.ConsoleWrite();
                 Logger.WriteIterationToFile(problemData, nextEigenValues, ++iteration, iterationsFileName);
 
-                while (!IsSatisfyPrec(prevEigenValues, nextEigenValues, problemData.Prec) && iteration < 0.5e3)
+                while (!IsSatisfyPrec(prevEigenValues, nextEigenValues, /*problemData.Prec*/ 0.001) && iteration < 0.5e3)
                 {
                     Console.WriteLine($"Iteration: {++iteration}");
 
@@ -77,34 +79,6 @@ namespace CourseworkAlgo2
 
                     Logger.WriteIterationToFile(problemData, nextEigenValues, iteration, iterationsFileName);
                 }
-
-                // Logger.WriteIterationToFile(problemData, eigenValues, iteration, iterationsFileName);
-
-                //for (var i = 0; i < eigenValues.Length; i++)
-                //{
-                //    Logger.WriteToFile(problemData, $"Precise {i + 1}", iterationsFileName);
-                //    iteration = 0;
-                //    var prevEigenValue = eigenValues[i].c1;
-                //    Console.WriteLine(prevEigenValue);
-                //    var nextEigenValue = problemCalculator.PreciseEigenvalue(prevEigenValue);
-                //    Logger.WriteIterationToFile(problemData, new[] { (nextEigenValue, problemData.GetC2(nextEigenValue)) }, ++iteration, iterationsFileName);
-
-                //    while (!IsSatisfyPrec(prevEigenValue, nextEigenValue, problemData.Prec) && iteration < 0.5e3)
-                //    {
-                //        Console.WriteLine($"Iteration: {iteration}");
-                //        Console.WriteLine(nextEigenValue);
-
-                //        prevEigenValue = nextEigenValue;
-                //        nextEigenValue = problemCalculator.PreciseEigenvalue(prevEigenValue);
-
-                //        Logger.WriteIterationToFile(problemData, new[] { (nextEigenValue, problemData.GetC2(nextEigenValue)) }, ++iteration, iterationsFileName);
-                //    }
-
-                //    eigenValues[i].c1 = nextEigenValue;
-                //    eigenValues[i].c2 = problemData.GetC2(nextEigenValue);
-                //}
-
-                // Logger.WriteResults(problemData, prevEigenValues, runTime);
 
                 Console.WriteLine($"alpha {problemData.Coef1} finished.");
             }

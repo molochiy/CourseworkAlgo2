@@ -33,13 +33,19 @@ namespace CourseworkAlgo2
 
         public Complex[] PreciseEigenValues(Complex[] eigenValues, Complex[] sk)
         {
-            var f = GetFVector(eigenValues);
+            
             var jacobian = GetJacobianMatrix(eigenValues);
+            // var jacobian = GetJacobianMatrixTest(eigenValues);
             var matrix = Matrix.Build.DenseOfRowArrays(jacobian);
+            if (Math.Abs(matrix.Determinant().Magnitude) < 1e-10)
+            {
+                return eigenValues;
+            }
+            var f = GetFVector(eigenValues);
+            // var f = GetFVectorTest(eigenValues);
+            
             var matrixInverse = matrix.Inverse();
-            Console.WriteLine(matrixInverse);
             var inverseJacobian = matrixInverse.ToRowArrays();
-            inverseJacobian.ConsoleWrite();
 
             var fs = f.Subtract(sk);
             var jacobianFs = inverseJacobian.Multiply(fs);
@@ -73,9 +79,40 @@ namespace CourseworkAlgo2
             return f;
         }
 
+        private Complex[][] GetJacobianMatrixTest(Complex[] eigenValues)
+        {
+            var n = eigenValues.Length;
+            var jacobianMatrix = new Complex[n][];
+            for (int i = 0; i < n; i++)
+            {
+                jacobianMatrix[i] = new Complex[n];
+            }
+
+            jacobianMatrix[0][0] = 2 * eigenValues[0];
+            jacobianMatrix[0][1] = 2 * eigenValues[1];
+            jacobianMatrix[0][2] = 2 * eigenValues[2];
+            jacobianMatrix[1][0] = 4 * eigenValues[0];
+            jacobianMatrix[1][1] = 2 * eigenValues[1];
+            jacobianMatrix[1][2] = -4;
+            jacobianMatrix[2][0] = 6 * eigenValues[0];
+            jacobianMatrix[2][1] = -4;
+            jacobianMatrix[2][2] = 2 * eigenValues[2];
+
+            return jacobianMatrix;
+        }
+
+        private Complex[] GetFVectorTest(Complex[] eigenValues)
+        {
+            var f = new Complex[3];
+            f[0] = Complex.Pow(eigenValues[0], 2) + Complex.Pow(eigenValues[1], 2) + Complex.Pow(eigenValues[2], 2) - 1;
+            f[1] = 2 * Complex.Pow(eigenValues[0], 2) + Complex.Pow(eigenValues[1], 2) - 4 * eigenValues[2];
+            f[2] = 3 * Complex.Pow(eigenValues[0], 2) - 4 * eigenValues[1] + Complex.Pow(eigenValues[2], 2);
+            return f;
+        }
+
         public Complex CalculateEigenvalueAmount(int power = 0)
         {
-            int n = 4;
+            int n = 8;
 
             Complex sum = Complex.Zero;
             for (var j = 1; j <= n; j++)
@@ -85,6 +122,8 @@ namespace CourseworkAlgo2
                 var lambdaJ = _problemData.Center + _problemData.Radius * complexMultiplier;
                 var d = GetDMatrix(lambdaJ);
                 var b = GetBMatrix(lambdaJ);
+                // var d = GetDMatrixAndriychuk(lambdaJ);
+                // var b = GetBMatrixAndriychuk(lambdaJ);
                 var (u, v) = MatrixDecompositor.DecomposeMatrixDiagonals(d, b);
                 Complex subSum = 0.0;
                 for (int r = 0; r < u.Length; r++)
@@ -198,6 +237,152 @@ namespace CourseworkAlgo2
 
                 return result;
             };
+        }
+
+        private Complex[][] GetDMatrixAndriychuk(Complex lambda)
+        {
+            var n = 2 * _problemData.N + 1;
+            var m = 2 * _problemData.M + 1;
+            var k = 0;
+            var l = 0;
+            var d = new Complex[n][];
+            for (var i = 0; i < n; i++)
+            {
+                d[i] = new Complex[m];
+                for (var j = 0; j < m; j++)
+                {
+                    var i1 = i;
+                    var j1 = j;
+
+                    Complex FuncE(double ksi1, double ksi2)
+                    {
+                        var angle = -(lambda * (i1 - _problemData.N - k) * ksi1 + _problemData.GetC2(lambda) * (j1 - _problemData.M - l) * ksi2);
+                        return Complex.Cos(angle) + Complex.ImaginaryOne * Complex.Sin(angle);
+                    }
+
+                    Complex Func(double ksi1, double ksi2) =>
+                        Complex.Sqrt(_problemData.P(ksi1, ksi2) - _problemData.LambdaValue) *
+                        FuncE(ksi1, ksi2);
+
+                    d[i][j] = IntegralCalculator.ComputeIntegralForProblem(Func, _problemData);
+                }
+            }
+
+            for (int i = 0; i < d.Length; i++)
+            {
+                d[i][i] -= 1;
+            }
+
+            return d;
+        }
+
+        private Complex[][] GetBMatrixAndriychuk(Complex lambda)
+        {
+            var n = 2 * _problemData.N + 1;
+            var m = 2 * _problemData.M + 1;
+            var k = 0;
+            var l = 0;
+            var b = new Complex[n][];
+            for (var i = 0; i < n; i++)
+            {
+                b[i] = new Complex[m];
+                for (var j = 0; j < m; j++)
+                {
+                    var i1 = i;
+                    var j1 = j;
+
+                    Complex FuncE(double ksi1, double ksi2)
+                    {
+                        var angle = -(lambda * (i1 - _problemData.N - k) * ksi1 + _problemData.GetC2(lambda) * (j1 - _problemData.M - l) * ksi2);
+                        return Complex.Cos(angle) + Complex.ImaginaryOne * Complex.Sin(angle);
+                    }
+
+                    Complex Func(double ksi1, double ksi2) =>
+                        Complex.Sqrt(_problemData.P(ksi1, ksi2) - _problemData.LambdaValue) *
+                        FuncE(ksi1, ksi2) *
+                        ksi1;
+
+                    b[i][j] = -Complex.ImaginaryOne *
+                              (i1 - _problemData.N - k) *
+                              IntegralCalculator.ComputeIntegralForProblem(Func, _problemData);
+                }
+            }
+
+            return b;
+        }
+
+        private Complex[][] GetDMatrixAndriychukC1C2(Complex lambda)
+        {
+            var n = 2 * _problemData.N + 1;
+            var m = 2 * _problemData.M + 1;
+            var k = 0;
+            var l = 0;
+            var d = new Complex[n][];
+            for (var i = 0; i < n; i++)
+            {
+                d[i] = new Complex[m];
+                for (var j = 0; j < m; j++)
+                {
+                    var i1 = i;
+                    var j1 = j;
+
+                    Complex FuncE(double ksi1, double ksi2)
+                    {
+                        var angle = -(lambda * (i1 - _problemData.N - k) * ksi1 + _problemData.GetC2(lambda) * (j1 - _problemData.M - l) * ksi2);
+                        return Complex.Cos(angle) + Complex.ImaginaryOne * Complex.Sin(angle);
+                    }
+
+                    Complex Func(double ksi1, double ksi2) =>
+                        Complex.Sqrt(_problemData.P(ksi1, ksi2) - _problemData.LambdaValue) *
+                        FuncE(ksi1, ksi2);
+
+                    d[i][j] = lambda * _problemData.GetC2(lambda) / (4 * Math.Pow(Math.PI, 2))
+                              * IntegralCalculator.ComputeIntegralForProblem(Func, _problemData);
+                }
+            }
+
+            for (int i = 0; i < d.Length; i++)
+            {
+                d[i][i] -= 1;
+            }
+
+            return d;
+        }
+
+        private Complex[][] GetBMatrixAndriychukC1C2(Complex lambda)
+        {
+            var n = 2 * _problemData.N + 1;
+            var m = 2 * _problemData.M + 1;
+            var k = 0;
+            var l = 0;
+            var b = new Complex[n][];
+            for (var i = 0; i < n; i++)
+            {
+                b[i] = new Complex[m];
+                for (var j = 0; j < m; j++)
+                {
+                    var i1 = i;
+                    var j1 = j;
+
+                    Complex FuncE(double ksi1, double ksi2)
+                    {
+                        var angle = -(lambda * (i1 - _problemData.N - k) * ksi1 + _problemData.GetC2(lambda) * (j1 - _problemData.M - l) * ksi2);
+                        return Complex.Cos(angle) + Complex.ImaginaryOne * Complex.Sin(angle);
+                    }
+
+                    Complex Func(double ksi1, double ksi2) =>
+                        Complex.Sqrt(_problemData.P(ksi1, ksi2) - _problemData.LambdaValue) *
+                        FuncE(ksi1, ksi2) *
+                        ksi1;
+
+                    b[i][j] = _problemData.GetC2(lambda) / (4 * Math.Pow(Math.PI, 2)) *
+                              (1 - lambda * Complex.ImaginaryOne *
+                              (i1 - _problemData.N - k)) *
+                              IntegralCalculator.ComputeIntegralForProblem(Func, _problemData);
+                }
+            }
+
+            return b;
         }
     }
 }

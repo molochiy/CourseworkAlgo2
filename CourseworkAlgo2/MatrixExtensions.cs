@@ -22,8 +22,9 @@ namespace CourseworkAlgo2
         {
             foreach (var cell in vector)
             {
-                Console.WriteLine($"({cell.Real:0.##}, {cell.Imaginary:0.##})");
+                Console.Write($"({cell.Real:0.##}, {cell.Imaginary:0.##}) ");
             }
+            Console.WriteLine();
         }
 
         public static Complex[][] Multiply(this Complex[][] matrix1, Complex[][] matrix2)
